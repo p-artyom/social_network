@@ -1,10 +1,10 @@
 {% extends "base.html" %}
 {% block title %}
-  Последние обновления на сайте
+  Посты ваших избранных авторов
 {% endblock title %}
 {% block content %}
   <div class="container py-5">
-    <h1>Последние обновления на сайте</h1>
+    <h1>Посты ваших избранных авторов</h1>
     {% include "posts/includes/switcher.html" %}
     {% if not page_obj %}
       <article>

@@ -15,8 +15,6 @@ from posts.models import Comment, Post
 User = get_user_model()
 
 TEMP_MEDIA_ROOT = tempfile.mkdtemp(dir=settings.BASE_DIR)
-ZERO_OBJECT = 0
-ONE_OBJECT = 1
 
 
 @override_settings(MEDIA_ROOT=TEMP_MEDIA_ROOT)
@@ -75,7 +73,7 @@ class PostsFormsTests(TestCase):
             response,
             reverse('posts:profile', kwargs={'username': self.author}),
         )
-        self.assertEqual(Post.objects.count(), ONE_OBJECT)
+        self.assertEqual(Post.objects.count(), settings.ONE_OBJECT)
         post = Post.objects.get()
         self.assertEqual(post.text, data['text'])
         self.assertEqual(post.author, data['author'])
@@ -93,7 +91,7 @@ class PostsFormsTests(TestCase):
             data=data,
             follow=True,
         )
-        self.assertEqual(Post.objects.count(), ZERO_OBJECT)
+        self.assertEqual(Post.objects.count(), settings.ZERO_OBJECT)
 
     def test_author_can_edit_post(self) -> None:
         """Автор может отредактировать свой пост."""
@@ -195,7 +193,7 @@ class PostsFormsTests(TestCase):
             response,
             reverse('posts:post_detail', kwargs={'pk': self.post.id}),
         )
-        self.assertEqual(Comment.objects.count(), ONE_OBJECT)
+        self.assertEqual(Comment.objects.count(), settings.ONE_OBJECT)
         comment = Comment.objects.get()
         self.assertEqual(comment.post, data['post'])
         self.assertEqual(comment.author, data['author'])
@@ -217,4 +215,4 @@ class PostsFormsTests(TestCase):
             data=data,
             follow=True,
         )
-        self.assertEqual(Comment.objects.count(), ZERO_OBJECT)
+        self.assertEqual(Comment.objects.count(), settings.ZERO_OBJECT)

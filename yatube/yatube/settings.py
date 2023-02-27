@@ -1,8 +1,12 @@
 from pathlib import Path
 
-CUT_OUTPUT = 15
+ZERO_OBJECT = 0
+
+ONE_OBJECT = 1
 
 NUM_OBJECTS = 10
+
+CUT_OUTPUT = 15
 
 UPDATE = 20
 

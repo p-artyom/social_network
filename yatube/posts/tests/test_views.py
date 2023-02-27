@@ -11,7 +11,7 @@ from django.urls import reverse
 from mixer.backend.django import mixer
 from testdata import wrap_testdata
 
-from posts.models import Post
+from posts.models import Follow, Post
 
 User = get_user_model()
 
@@ -199,3 +199,35 @@ class PostsViewsTests(TestCase):
             self.author_user.get(reverse('posts:index')).content,
             posts,
         )
+
+    def test_authorized_user_can_following_and_unfollowing(self) -> None:
+        """Авторизованный пользователь может подписываться на других
+        пользователей и удалять их из подписок.
+        """
+        self.assertEqual(Follow.objects.count(), settings.ZERO_OBJECT)
+        data = {
+            'user': self.user,
+            'author': self.author,
+        }
+        response = self.authorized_user.post(
+            reverse('posts:profile_follow', kwargs={'username': self.author}),
+            data=data,
+            follow=True,
+        )
+        self.assertRedirects(
+            response,
+            reverse('posts:profile', kwargs={'username': self.author}),
+        )
+        self.assertEqual(Follow.objects.count(), settings.ONE_OBJECT)
+        response = self.authorized_user.post(
+            reverse(
+                'posts:profile_unfollow', kwargs={'username': self.author},
+            ),
+            data=data,
+            follow=True,
+        )
+        self.assertRedirects(
+            response,
+            reverse('posts:profile', kwargs={'username': self.author}),
+        )
+        self.assertEqual(Follow.objects.count(), settings.ZERO_OBJECT)

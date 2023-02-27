@@ -78,3 +78,25 @@ class Comment(CreatedModel):
 
     def __str__(self) -> str:
         return cut_string(self.text)
+
+
+class Follow(models.Model):
+    user = models.ForeignKey(
+        User,
+        on_delete=models.CASCADE,
+        verbose_name='пользователь',
+        related_name='follower',
+    )
+    author = models.ForeignKey(
+        User,
+        on_delete=models.CASCADE,
+        verbose_name='автор',
+        related_name='following',
+    )
+
+    class Meta:
+        verbose_name = 'подписка'
+        verbose_name_plural = 'подписки'
+
+    def __str__(self) -> str:
+        return f'{self.user} подписался на {self.author}'

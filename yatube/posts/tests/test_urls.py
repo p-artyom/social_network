@@ -120,6 +120,11 @@ class PostsUrlsTests(TestCase):
                 'posts/create_post.html',
                 self.authorized_user,
             ),
+            (
+                self.urls.get('unexisting_page'),
+                'core/404.html',
+                self.client,
+            ),
         )
         for url, template, user in templates:
             with self.subTest(url=url, template=template, user=user):
