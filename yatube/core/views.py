@@ -14,6 +14,18 @@ def page_not_found(request: HttpRequest, exception: Exception) -> HttpResponse:
     )
 
 
+def server_error(request: HttpRequest) -> HttpResponse:
+    return render(request, 'core/500.html', status=500)
+
+
+def permission_denied(
+    request: HttpRequest,
+    exception: Exception,
+) -> HttpResponse:
+    del exception
+    return render(request, 'core/403.html', status=403)
+
+
 def csrf_failure(request: HttpRequest, reason: str = '') -> HttpResponse:
     del reason
     return render(request, 'core/403csrf.html')

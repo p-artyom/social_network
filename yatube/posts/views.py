@@ -146,7 +146,11 @@ def follow_index(request: HttpRequest) -> HttpResponse:
 @login_required
 def profile_follow(request: HttpRequest, username: str) -> HttpResponse:
     author = get_object_or_404(User, username=username)
-    if request.user != author:
+    subscription = Follow.objects.filter(
+        user=request.user,
+        author=author,
+    ).exists()
+    if request.user != author and not subscription:
         Follow.objects.create(user=request.user, author=author)
     return redirect(
         'posts:profile',

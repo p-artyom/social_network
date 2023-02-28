@@ -221,7 +221,8 @@ class PostsViewsTests(TestCase):
         self.assertEqual(Follow.objects.count(), settings.ONE_OBJECT)
         response = self.authorized_user.post(
             reverse(
-                'posts:profile_unfollow', kwargs={'username': self.author},
+                'posts:profile_unfollow',
+                kwargs={'username': self.author},
             ),
             data=data,
             follow=True,
@@ -231,3 +232,40 @@ class PostsViewsTests(TestCase):
             reverse('posts:profile', kwargs={'username': self.author}),
         )
         self.assertEqual(Follow.objects.count(), settings.ZERO_OBJECT)
+
+    def test_post_appears_in_followers(self) -> None:
+        """Новая запись пользователя появляется в ленте тех, кто на него
+        подписан и не появляется в ленте тех, кто не подписан.
+        """
+        self.user_not_follower = mixer.blend(User)
+        self.not_follower = Client()
+        self.not_follower.force_login(self.user_not_follower)
+        data = {
+            'user': self.user,
+            'author': self.author,
+        }
+        self.authorized_user.post(
+            reverse('posts:profile_follow', kwargs={'username': self.author}),
+            data=data,
+            follow=True,
+        )
+        self.post = mixer.blend(
+            'posts.Post',
+            author=self.author,
+        )
+        self.assertEqual(
+            list(Post.objects.select_related('author')),
+            list(
+                self.authorized_user.get(
+                    reverse('posts:follow_index'),
+                ).context['page_obj'],
+            ),
+        )
+        self.assertNotIn(
+            list(Post.objects.select_related('author')),
+            list(
+                self.not_follower.get(
+                    reverse('posts:follow_index'),
+                ).context['page_obj'],
+            ),
+        )
