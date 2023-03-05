@@ -14,7 +14,6 @@
       {% for post in page_obj %}
         {% include "posts/includes/post.html" with userlink=True grouplink=True %}
         {% if not forloop.last %}<hr>{% endif %}
-        {% if page_obj %}<hr>{% endif %}
       {% endfor %}
     {% endif %}
     {% include "includes/paginator.html" %}

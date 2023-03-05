@@ -26,5 +26,5 @@ class CommentAdmin(BaseAdmin):
 
 @admin.register(Follow)
 class FollowAdmin(BaseAdmin):
-    list_display = ('pk', 'user', 'author')
+    list_display = ('pk', Follow.__str__)
     search_fields = ('user',)

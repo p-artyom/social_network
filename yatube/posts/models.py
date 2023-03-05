@@ -1,7 +1,7 @@
 from django.contrib.auth import get_user_model
 from django.db import models
 
-from core.models import CreatedModel
+from core.models import TimestampedModel
 from core.utils import cut_string
 
 User = get_user_model()
@@ -31,13 +31,7 @@ class Group(models.Model):
         return cut_string(self.title)
 
 
-class Post(CreatedModel):
-    text = models.TextField('текст', help_text='Введите текст поста')
-    author = models.ForeignKey(
-        User,
-        on_delete=models.CASCADE,
-        verbose_name='автор',
-    )
+class Post(TimestampedModel):
     group = models.ForeignKey(
         Group,
         on_delete=models.SET_NULL,
@@ -48,8 +42,7 @@ class Post(CreatedModel):
     )
     image = models.ImageField('картинка', upload_to='posts/', blank=True)
 
-    class Meta:
-        ordering = ('-created',)
+    class Meta(TimestampedModel.Meta):
         verbose_name = 'пост'
         verbose_name_plural = 'посты'
         default_related_name = 'posts'
@@ -58,20 +51,14 @@ class Post(CreatedModel):
         return cut_string(self.text)
 
 
-class Comment(CreatedModel):
+class Comment(TimestampedModel):
     post = models.ForeignKey(
         Post,
         on_delete=models.CASCADE,
         verbose_name='пост',
     )
-    author = models.ForeignKey(
-        User,
-        on_delete=models.CASCADE,
-        verbose_name='автор',
-    )
-    text = models.TextField('текст', help_text='Введите комментарий')
 
-    class Meta:
+    class Meta(TimestampedModel.Meta):
         verbose_name = 'комментарий'
         verbose_name_plural = 'комментарии'
         default_related_name = 'comments'
@@ -99,4 +86,4 @@ class Follow(models.Model):
         verbose_name_plural = 'подписки'
 
     def __str__(self) -> str:
-        return f'{self.user} подписался на {self.author}'
+        return f'`{self.user}` подписался на `{self.author}`'

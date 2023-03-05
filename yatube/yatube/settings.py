@@ -1,14 +1,14 @@
 from pathlib import Path
 
-ZERO_OBJECT = 0
+CHECK_ZERO_OBJECTS_FOR_TEST = 0
 
-ONE_OBJECT = 1
+CHECK_ONE_OBJECT_FOR_TEST = 1
 
-NUM_OBJECTS = 10
+NUM_OBJECTS_ON_PAGE = 10
 
-CUT_OUTPUT = 15
+STR_LENGTH_WHEN_PRINTING_MODEL = 15
 
-UPDATE = 20
+CACHE_TIMEOUT = 20
 
 BASE_DIR = Path(__file__).resolve(strict=True).parent.parent
 

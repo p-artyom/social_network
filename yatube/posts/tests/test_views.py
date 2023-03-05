@@ -5,13 +5,13 @@ from django import forms
 from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.core.cache import cache
-from django.core.files.uploadedfile import SimpleUploadedFile
 from django.test import Client, TestCase, override_settings
 from django.urls import reverse
 from mixer.backend.django import mixer
 from testdata import wrap_testdata
 
 from posts.models import Follow, Post
+from posts.tests.common import image
 
 User = get_user_model()
 
@@ -25,24 +25,11 @@ class PostsViewsTests(TestCase):
     def setUpTestData(cls) -> None:
         cls.user, cls.author = mixer.cycle(2).blend(User)
         cls.group = mixer.blend('posts.Group')
-        small_gif = (
-            b'\x47\x49\x46\x38\x39\x61\x02\x00'
-            b'\x01\x00\x80\x00\x00\x00\x00\x00'
-            b'\xFF\xFF\xFF\x21\xF9\x04\x00\x00'
-            b'\x00\x00\x00\x2C\x00\x00\x00\x00'
-            b'\x02\x00\x01\x00\x00\x02\x02\x0C'
-            b'\x0A\x00\x3B'
-        )
-        uploaded = SimpleUploadedFile(
-            name='small.gif',
-            content=small_gif,
-            content_type='image/gif',
-        )
         cls.post = mixer.blend(
             'posts.Post',
             author=cls.author,
             group=cls.group,
-            image=uploaded,
+            image=image(),
         )
 
     @classmethod
@@ -137,8 +124,10 @@ class PostsViewsTests(TestCase):
                 )
 
     def test_created_post_present_on_all_pages(self) -> None:
-        """Пост, после создания, появляется на главной,
-        на странице группы и в профайле пользователя.
+        """Пост присутствует на всех необходимых страницах.
+
+        Пост, после создания, появляется на главной странице сайта,
+        на странице выбранной группы и в профайле пользователя.
         """
         self.post = mixer.blend(
             'posts.Post',
@@ -201,52 +190,54 @@ class PostsViewsTests(TestCase):
         )
 
     def test_authorized_user_can_following_and_unfollowing(self) -> None:
-        """Авторизованный пользователь может подписываться на других
+        """Подписки работают корректно.
+
+        Авторизованный пользователь может подписываться на других
         пользователей и удалять их из подписок.
         """
-        self.assertEqual(Follow.objects.count(), settings.ZERO_OBJECT)
-        data = {
-            'user': self.user,
-            'author': self.author,
-        }
+        self.assertEqual(
+            Follow.objects.count(),
+            settings.CHECK_ZERO_OBJECTS_FOR_TEST,
+        )
         response = self.authorized_user.post(
             reverse('posts:profile_follow', kwargs={'username': self.author}),
-            data=data,
             follow=True,
         )
         self.assertRedirects(
             response,
             reverse('posts:profile', kwargs={'username': self.author}),
         )
-        self.assertEqual(Follow.objects.count(), settings.ONE_OBJECT)
+        self.assertEqual(
+            Follow.objects.count(),
+            settings.CHECK_ONE_OBJECT_FOR_TEST,
+        )
         response = self.authorized_user.post(
             reverse(
                 'posts:profile_unfollow',
                 kwargs={'username': self.author},
             ),
-            data=data,
             follow=True,
         )
         self.assertRedirects(
             response,
             reverse('posts:profile', kwargs={'username': self.author}),
         )
-        self.assertEqual(Follow.objects.count(), settings.ZERO_OBJECT)
+        self.assertEqual(
+            Follow.objects.count(),
+            settings.CHECK_ZERO_OBJECTS_FOR_TEST,
+        )
 
     def test_post_appears_in_followers(self) -> None:
-        """Новая запись пользователя появляется в ленте тех, кто на него
+        """У подписчиков корректно отображаются посты.
+
+        Новая запись пользователя появляется в ленте тех, кто на него
         подписан и не появляется в ленте тех, кто не подписан.
         """
         self.user_not_follower = mixer.blend(User)
         self.not_follower = Client()
         self.not_follower.force_login(self.user_not_follower)
-        data = {
-            'user': self.user,
-            'author': self.author,
-        }
         self.authorized_user.post(
             reverse('posts:profile_follow', kwargs={'username': self.author}),
-            data=data,
             follow=True,
         )
         self.post = mixer.blend(
@@ -268,4 +259,62 @@ class PostsViewsTests(TestCase):
                     reverse('posts:follow_index'),
                 ).context['page_obj'],
             ),
+        )
+
+    def test_cannot_subscribe_yourself(self) -> None:
+        """Нельзя подписаться на самого себя."""
+        self.assertEqual(
+            Follow.objects.count(),
+            settings.CHECK_ZERO_OBJECTS_FOR_TEST,
+        )
+        response = self.author_user.post(
+            reverse('posts:profile_follow', kwargs={'username': self.author}),
+            follow=True,
+        )
+        self.assertRedirects(
+            response,
+            reverse('posts:profile', kwargs={'username': self.author}),
+        )
+        self.assertEqual(
+            Follow.objects.count(),
+            settings.CHECK_ZERO_OBJECTS_FOR_TEST,
+        )
+
+    def test_anon_cannot_subscribe(self) -> None:
+        """Анонимный пользователь не может подписаться."""
+        self.assertEqual(
+            Follow.objects.count(),
+            settings.CHECK_ZERO_OBJECTS_FOR_TEST,
+        )
+        response = self.client.post(
+            reverse('posts:profile_follow', kwargs={'username': self.author}),
+            follow=True,
+        )
+        self.assertRedirects(
+            response,
+            reverse('login')
+            + '?next='
+            + reverse(
+                'posts:profile_follow',
+                kwargs={'username': self.author},
+            ),
+        )
+        self.assertEqual(
+            Follow.objects.count(),
+            settings.CHECK_ZERO_OBJECTS_FOR_TEST,
+        )
+
+    def test_cannot_subscribe_on_anon(self) -> None:
+        """Нельзя подписаться на анонимного пользователя."""
+        self.assertEqual(
+            Follow.objects.count(),
+            settings.CHECK_ZERO_OBJECTS_FOR_TEST,
+        )
+        self.author_user.post(
+            reverse('posts:profile_follow', kwargs={'username': self.client}),
+            follow=True,
+        )
+        self.assertEqual(
+            Follow.objects.count(),
+            settings.CHECK_ZERO_OBJECTS_FOR_TEST,
         )

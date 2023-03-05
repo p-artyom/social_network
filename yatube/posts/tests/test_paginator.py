@@ -44,20 +44,20 @@ class PaginatorTests(TestCase):
     def test_paginator(self) -> None:
         """На страницы передаётся ожидаемое количество объектов."""
         page_names_num_objects = (
-            (reverse('posts:index'), settings.NUM_OBJECTS),
+            (reverse('posts:index'), settings.NUM_OBJECTS_ON_PAGE),
             (
                 reverse(
                     'posts:group_list',
                     kwargs={'slug': self.group.slug},
                 ),
-                settings.NUM_OBJECTS,
+                settings.NUM_OBJECTS_ON_PAGE,
             ),
             (
                 reverse(
                     'posts:profile',
                     kwargs={'username': self.author},
                 ),
-                settings.NUM_OBJECTS,
+                settings.NUM_OBJECTS_ON_PAGE,
             ),
         )
         for page_name, num_object in page_names_num_objects:

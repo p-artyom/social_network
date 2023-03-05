@@ -1,19 +1,19 @@
-import datetime
+import datetime as dt
 from typing import Dict
 
 from django.http import HttpRequest
 
 
-def year(unused: HttpRequest) -> Dict[str, int]:
+def year(request: HttpRequest) -> Dict[str, int]:
     """Добавляет переменную с текущим годом.
 
     Args:
-        unused: Объект запроса.
+        request: Объект запроса.
 
     Returns:
         Текущий год на все страницы в переменную {{ year }}.
     """
-    del unused
+    del request
     return {
-        'year': datetime.datetime.now().year,
+        'year': dt.datetime.now().year,
     }

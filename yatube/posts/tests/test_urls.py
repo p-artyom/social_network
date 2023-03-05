@@ -3,7 +3,7 @@ import tempfile
 from http import HTTPStatus
 
 from django.conf import settings
-from django.contrib.auth import get_user_model
+from django.contrib.auth import get_user, get_user_model
 from django.core.cache import cache
 from django.test import Client, TestCase, override_settings
 from django.urls import reverse
@@ -58,15 +58,25 @@ class PostsUrlsTests(TestCase):
             ),
             'post_create': reverse('posts:post_create'),
             'unexisting_page': '/unexisting_page/',
+            'post_comment': reverse(
+                'posts:add_comment',
+                kwargs={'pk': cls.post.id},
+            ),
+            'follow': reverse('posts:follow_index'),
+            'profile_follow': reverse(
+                'posts:profile_follow',
+                kwargs={'username': cls.post.author},
+            ),
+            'profile_unfollow': reverse(
+                'posts:profile_unfollow',
+                kwargs={'username': cls.post.author},
+            ),
         }
 
     @classmethod
     def tearDownClass(cls) -> None:
         super().tearDownClass()
         shutil.rmtree(TEMP_MEDIA_ROOT, ignore_errors=True)
-
-    def setUp(self) -> None:
-        cache.clear()
 
     def test_http_statuses(self) -> None:
         """URL-адрес возвращает соответствующий статус."""
@@ -94,13 +104,58 @@ class PostsUrlsTests(TestCase):
                 HTTPStatus.OK,
                 self.authorized_user,
             ),
+            (
+                self.urls.get('post_comment'),
+                HTTPStatus.FOUND,
+                self.client,
+            ),
+            (
+                self.urls.get('post_comment'),
+                HTTPStatus.FOUND,
+                self.authorized_user,
+            ),
+            (
+                self.urls.get('follow'),
+                HTTPStatus.FOUND,
+                self.client,
+            ),
+            (
+                self.urls.get('follow'),
+                HTTPStatus.OK,
+                self.authorized_user,
+            ),
+            (
+                self.urls.get('profile_follow'),
+                HTTPStatus.FOUND,
+                self.client,
+            ),
+            (
+                self.urls.get('profile_follow'),
+                HTTPStatus.FOUND,
+                self.authorized_user,
+            ),
+            (
+                self.urls.get('profile_unfollow'),
+                HTTPStatus.FOUND,
+                self.client,
+            ),
+            (
+                self.urls.get('profile_unfollow'),
+                HTTPStatus.FOUND,
+                self.authorized_user,
+            ),
         )
         for url, status, user in httpstatuses:
-            with self.subTest(url=url, status=status, user=user):
+            with self.subTest(
+                url=url,
+                status=status,
+                user=get_user(user).username,
+            ):
                 self.assertEqual(user.get(url).status_code, status)
 
     def test_templates(self) -> None:
         """URL-адрес использует соответствующий шаблон."""
+        cache.clear()
         templates = (
             (self.urls.get('index'), 'posts/index.html', self.client),
             (self.urls.get('group'), 'posts/group_list.html', self.client),
@@ -125,9 +180,18 @@ class PostsUrlsTests(TestCase):
                 'core/404.html',
                 self.client,
             ),
+            (
+                self.urls.get('follow'),
+                'posts/follow.html',
+                self.authorized_user,
+            ),
         )
         for url, template, user in templates:
-            with self.subTest(url=url, template=template, user=user):
+            with self.subTest(
+                url=url,
+                template=template,
+                user=get_user(user).username,
+            ):
                 self.assertTemplateUsed(user.get(url), template)
 
     def test_redirects(self) -> None:
@@ -148,7 +212,26 @@ class PostsUrlsTests(TestCase):
                 self.urls.get('post_detail'),
                 self.authorized_user,
             ),
+            (
+                self.urls.get('post_comment'),
+                self.urls.get('post_detail'),
+                self.authorized_user,
+            ),
+            (
+                self.urls.get('profile_follow'),
+                self.urls.get('profile'),
+                self.authorized_user,
+            ),
+            (
+                self.urls.get('profile_unfollow'),
+                self.urls.get('profile'),
+                self.authorized_user,
+            ),
         )
-        for url, redirects, user in redirects:
-            with self.subTest(url=url, redirects=redirects, user=user):
-                self.assertRedirects(user.get(url, follow=True), redirects)
+        for url, forward, user in redirects:
+            with self.subTest(
+                url=url,
+                forward=forward,
+                user=get_user(user).username,
+            ):
+                self.assertRedirects(user.get(url, follow=True), forward)

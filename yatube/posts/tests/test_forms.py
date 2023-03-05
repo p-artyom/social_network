@@ -4,13 +4,13 @@ import tempfile
 from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.core.cache import cache
-from django.core.files.uploadedfile import SimpleUploadedFile
 from django.test import Client, TestCase, override_settings
 from django.urls import reverse
 from mixer.backend.django import mixer
 from testdata import wrap_testdata
 
 from posts.models import Comment, Post
+from posts.tests.common import image
 
 User = get_user_model()
 
@@ -22,7 +22,7 @@ class PostsFormsTests(TestCase):
     @classmethod
     @wrap_testdata
     def setUpTestData(cls) -> None:
-        cls.author, cls.not_author = mixer.cycle(2).blend(User)
+        cls.author, cls.regular_user = mixer.cycle(2).blend(User)
 
     @classmethod
     def setUpClass(cls) -> None:
@@ -32,7 +32,7 @@ class PostsFormsTests(TestCase):
         cls.authorized_user = Client()
 
         cls.user.force_login(cls.author)
-        cls.authorized_user.force_login(cls.not_author)
+        cls.authorized_user.force_login(cls.regular_user)
 
     @classmethod
     def tearDownClass(cls) -> None:
@@ -44,25 +44,11 @@ class PostsFormsTests(TestCase):
 
     def test_author_can_create_post(self) -> None:
         """Авторизованный пользователь может создать пост."""
-        small_gif = (
-            b'\x47\x49\x46\x38\x39\x61\x02\x00'
-            b'\x01\x00\x80\x00\x00\x00\x00\x00'
-            b'\xFF\xFF\xFF\x21\xF9\x04\x00\x00'
-            b'\x00\x00\x00\x2C\x00\x00\x00\x00'
-            b'\x02\x00\x01\x00\x00\x02\x02\x0C'
-            b'\x0A\x00\x3B'
-        )
-        uploaded = SimpleUploadedFile(
-            name='small.gif',
-            content=small_gif,
-            content_type='image/gif',
-        )
         self.group = mixer.blend('posts.Group')
         data = {
             'text': 'Hello, wolrd! Hello, Django!',
-            'author': self.author,
             'group': self.group.id,
-            'image': uploaded,
+            'image': image(),
         }
         response = self.user.post(
             reverse('posts:post_create'),
@@ -73,10 +59,13 @@ class PostsFormsTests(TestCase):
             response,
             reverse('posts:profile', kwargs={'username': self.author}),
         )
-        self.assertEqual(Post.objects.count(), settings.ONE_OBJECT)
+        self.assertEqual(
+            Post.objects.count(),
+            settings.CHECK_ONE_OBJECT_FOR_TEST,
+        )
         post = Post.objects.get()
         self.assertEqual(post.text, data['text'])
-        self.assertEqual(post.author, data['author'])
+        self.assertEqual(post.author, self.author)
         self.assertEqual(post.group.id, data['group'])
         self.assertEqual(post.image, 'posts/small.gif')
 
@@ -84,14 +73,16 @@ class PostsFormsTests(TestCase):
         """Анонимный пользователь не может создать пост."""
         data = {
             'text': 'Hello, wolrd! Hello, Django!',
-            'author': self.author,
         }
         self.client.post(
             reverse('posts:post_create'),
             data=data,
             follow=True,
         )
-        self.assertEqual(Post.objects.count(), settings.ZERO_OBJECT)
+        self.assertEqual(
+            Post.objects.count(),
+            settings.CHECK_ZERO_OBJECTS_FOR_TEST,
+        )
 
     def test_author_can_edit_post(self) -> None:
         """Автор может отредактировать свой пост."""
@@ -104,6 +95,7 @@ class PostsFormsTests(TestCase):
         data = {
             'text': 'Изменяем текст поста!',
             'group': self.group.id,
+            'image': image(),
         }
         response = self.user.post(
             reverse('posts:post_edit', kwargs={'pk': self.post.id}),
@@ -113,6 +105,10 @@ class PostsFormsTests(TestCase):
         self.assertRedirects(
             response,
             reverse('posts:post_detail', kwargs={'pk': self.post.id}),
+        )
+        self.assertEqual(
+            Post.objects.count(),
+            settings.CHECK_ONE_OBJECT_FOR_TEST,
         )
         post = Post.objects.get()
         self.assertEqual(post.text, data['text'])
@@ -139,6 +135,10 @@ class PostsFormsTests(TestCase):
             data=data,
             follow=True,
         )
+        self.assertEqual(
+            Post.objects.count(),
+            settings.CHECK_ONE_OBJECT_FOR_TEST,
+        )
         post = Post.objects.get()
         self.assertEqual(post.text, self.post.text)
         self.assertEqual(post.author, self.post.author)
@@ -149,7 +149,6 @@ class PostsFormsTests(TestCase):
         self.group = mixer.blend('posts.Group')
         self.post = mixer.blend(
             'posts.Post',
-            author=self.author,
             group=self.group,
         )
         data = {
@@ -168,6 +167,10 @@ class PostsFormsTests(TestCase):
             response,
             reverse('posts:post_detail', kwargs={'pk': self.post.id}),
         )
+        self.assertEqual(
+            Post.objects.count(),
+            settings.CHECK_ONE_OBJECT_FOR_TEST,
+        )
         post = Post.objects.get()
         self.assertEqual(post.text, self.post.text)
         self.assertEqual(post.author, self.post.author)
@@ -181,7 +184,6 @@ class PostsFormsTests(TestCase):
         )
         data = {
             'post': self.post,
-            'author': self.author,
             'text': 'Первый комментарий!',
         }
         response = self.user.post(
@@ -193,10 +195,13 @@ class PostsFormsTests(TestCase):
             response,
             reverse('posts:post_detail', kwargs={'pk': self.post.id}),
         )
-        self.assertEqual(Comment.objects.count(), settings.ONE_OBJECT)
+        self.assertEqual(
+            Comment.objects.count(),
+            settings.CHECK_ONE_OBJECT_FOR_TEST,
+        )
         comment = Comment.objects.get()
         self.assertEqual(comment.post, data['post'])
-        self.assertEqual(comment.author, data['author'])
+        self.assertEqual(comment.author, self.author)
         self.assertEqual(comment.text, data['text'])
 
     def test_anon_can_not_create_comment(self) -> None:
@@ -207,7 +212,6 @@ class PostsFormsTests(TestCase):
         )
         data = {
             'post': self.post,
-            'author': self.author,
             'text': 'Первый комментарий!',
         }
         self.client.post(
@@ -215,4 +219,7 @@ class PostsFormsTests(TestCase):
             data=data,
             follow=True,
         )
-        self.assertEqual(Comment.objects.count(), settings.ZERO_OBJECT)
+        self.assertEqual(
+            Comment.objects.count(),
+            settings.CHECK_ZERO_OBJECTS_FOR_TEST,
+        )

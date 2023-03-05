@@ -7,7 +7,7 @@ from django.http import HttpRequest
 def paginate(
     request: HttpRequest,
     queryset: QuerySet,
-    per_page: int = settings.NUM_OBJECTS,
+    per_page: int = settings.NUM_OBJECTS_ON_PAGE,
 ) -> Page:
     """Список материалов сайта разбивает постранично.
 
@@ -22,7 +22,10 @@ def paginate(
     return Paginator(queryset, per_page).get_page(request.GET.get('page'))
 
 
-def cut_string(field: str, cut_out: int = settings.CUT_OUTPUT) -> str:
+def cut_string(
+    field: str,
+    cut_out: int = settings.STR_LENGTH_WHEN_PRINTING_MODEL,
+) -> str:
     """Обрезает строку, если оно больше заданной длины.
 
     Args:

@@ -1,3 +1,4 @@
+from django.conf import settings
 from django.contrib.auth.decorators import login_required
 from django.http import HttpRequest, HttpResponse
 from django.shortcuts import get_object_or_404, redirect, render
@@ -8,28 +9,30 @@ from posts.forms import CommentForm, PostForm
 from posts.models import Follow, Group, Post, User
 
 
-@cache_page(20, key_prefix='index_page')
+@cache_page(settings.CACHE_TIMEOUT, key_prefix='index_page')
 def index(request: HttpRequest) -> HttpResponse:
-    posts = Post.objects.select_related('author')
-    page = paginate(request, posts)
     return render(
         request,
         'posts/index.html',
         {
-            'page_obj': page,
+            'page_obj': paginate(
+                request,
+                Post.objects.select_related('author'),
+            ),
         },
     )
 
 
 def group_posts(request: HttpRequest, slug: str) -> HttpResponse:
     group = get_object_or_404(Group, slug=slug)
-    posts = group.posts.select_related('author', 'group')
-    page = paginate(request, posts)
     return render(
         request,
         'posts/group_list.html',
         {
-            'page_obj': page,
+            'page_obj': paginate(
+                request,
+                group.posts.select_related('author', 'group'),
+            ),
             'group': group,
         },
     )
@@ -37,16 +40,18 @@ def group_posts(request: HttpRequest, slug: str) -> HttpResponse:
 
 def profile(request: HttpRequest, username: str) -> HttpResponse:
     users = get_object_or_404(User, username=username)
-    following = request.user.is_authenticated
-    if following:
-        following = users.following.filter(user=request.user).exists()
-    posts = users.posts.select_related('author')
-    page = paginate(request, posts)
+    following = (
+        request.user.is_authenticated
+        and users.following.filter(user=request.user).exists()
+    )
     return render(
         request,
         'posts/profile.html',
         {
-            'page_obj': page,
+            'page_obj': paginate(
+                request,
+                users.posts.select_related('author'),
+            ),
             'users': users,
             'following': following,
         },
@@ -55,14 +60,13 @@ def profile(request: HttpRequest, username: str) -> HttpResponse:
 
 def post_detail(request: HttpRequest, pk: int) -> HttpResponse:
     posts = get_object_or_404(Post, pk=pk)
-    comments = posts.comments.select_related('post')
     return render(
         request,
         'posts/post_detail.html',
         {
             'posts': posts,
             'form': CommentForm(),
-            'comments': comments,
+            'comments': posts.comments.select_related('post'),
         },
     )
 
@@ -132,13 +136,14 @@ def add_comment(request: HttpRequest, pk: int) -> HttpResponse:
 
 @login_required
 def follow_index(request: HttpRequest) -> HttpResponse:
-    posts = Post.objects.filter(author__following__user=request.user)
-    page = paginate(request, posts)
     return render(
         request,
         'posts/follow.html',
         {
-            'page_obj': page,
+            'page_obj': paginate(
+                request,
+                Post.objects.filter(author__following__user=request.user),
+            ),
         },
     )
 
@@ -146,23 +151,28 @@ def follow_index(request: HttpRequest) -> HttpResponse:
 @login_required
 def profile_follow(request: HttpRequest, username: str) -> HttpResponse:
     author = get_object_or_404(User, username=username)
-    subscription = Follow.objects.filter(
-        user=request.user,
-        author=author,
-    ).exists()
-    if request.user != author and not subscription:
+    if (
+        request.user != author
+        and not Follow.objects.filter(
+            user=request.user,
+            author=author,
+        ).exists()
+    ):
         Follow.objects.create(user=request.user, author=author)
     return redirect(
         'posts:profile',
-        author,
+        username,
     )
 
 
 @login_required
 def profile_unfollow(request: HttpRequest, username: str) -> HttpResponse:
-    author = get_object_or_404(User, username=username)
-    Follow.objects.filter(user=request.user, author=author).delete()
+    get_object_or_404(
+        Follow,
+        user=request.user,
+        author=get_object_or_404(User, username=username),
+    ).delete()
     return redirect(
         'posts:profile',
-        author,
+        username,
     )
