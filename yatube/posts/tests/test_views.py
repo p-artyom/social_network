@@ -173,7 +173,7 @@ class PostsViewsTests(TestCase):
         )
 
     def test_cache(self) -> None:
-        """Тестирование кэша"""
+        """Тестирование кэша."""
         posts = self.author_user.get(reverse('posts:index')).content
         self.post = mixer.blend(
             'posts.Post',

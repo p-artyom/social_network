@@ -31,6 +31,12 @@ pip install -r requirements.txt
 python3 manage.py runserver
 ```
 
+- Или если установлен GNU Make (На MacOS и Linux он уже установлен), то из папки проекта выполните команду:
+
+```text
+make run
+```
+
 ## Автор
 
 Пилипенко Артем

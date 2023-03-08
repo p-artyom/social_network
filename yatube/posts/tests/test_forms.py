@@ -208,7 +208,6 @@ class PostsFormsTests(TestCase):
         """Анонимный пользователь не может комментировать пост."""
         self.post = mixer.blend(
             'posts.Post',
-            author=self.author,
         )
         data = {
             'post': self.post,
