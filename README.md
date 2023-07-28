@@ -23,6 +23,12 @@
 pip install -r requirements.txt
 ```
 
+- В папке с файлом manage.py выполните миграции:
+
+```text
+python manage.py migrate
+```
+
 - В папке с файлом manage.py выполните команду:
 
 ```text
