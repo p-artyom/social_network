@@ -1,4 +1,7 @@
+import os
 from pathlib import Path
+
+from dotenv import load_dotenv
 
 CHECK_ZERO_OBJECTS_FOR_TEST = 0
 
@@ -12,16 +15,16 @@ CACHE_TIMEOUT = 20
 
 BASE_DIR = Path(__file__).resolve(strict=True).parent.parent
 
-SECRET_KEY = 'v$oa=q!djet^5)tpk%@!#i8sf!v-7i=a#m8d5z-1j6$6=qw%!p'
+DOTENV_PATH = BASE_DIR / 'yatube' / '.env'
 
-DEBUG = True
+if os.path.exists(DOTENV_PATH):
+    load_dotenv(DOTENV_PATH)
 
-ALLOWED_HOSTS = [
-    'localhost',
-    '127.0.0.1',
-    '[::1]',
-    'testserver',
-]
+SECRET_KEY = os.getenv('SECRET_KEY')
+
+DEBUG = os.getenv('DEBUG') == 'True'
+
+ALLOWED_HOSTS = os.getenv('ALLOWED_HOSTS').split(' ')
 
 # fmt: off
 INSTALLED_APPS = [

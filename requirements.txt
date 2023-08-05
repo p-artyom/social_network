@@ -42,6 +42,7 @@ pytest==6.2.4
 pytest-django==4.4.0
 pytest-pythonpath==0.7.3
 python-dateutil==2.8.2
+python-dotenv==1.0.0
 pytz==2022.7.1
 PyYAML==6.0
 regex==2022.10.31
